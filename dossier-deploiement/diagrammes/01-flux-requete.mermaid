@@ -1,0 +1,81 @@
+%% ===========================================================================
+%% Velmo 2.0 sur Azure — VUE 1 : le trajet d'une requête
+%%
+%% Question à laquelle ce schéma répond :
+%%   « que traverse un message du vendeur, et dans quel ordre ? »
+%%
+%% L'ordre des cinq étapes est imposé par le brief et n'a pas bougé au
+%% passage en ligne : garde-fou entrée > mémoire lecture > LLM >
+%% garde-fou sortie > mémoire écriture (tracé dans agent.py:111-157).
+%%
+%% Source éditable. Collable dans https://mermaid.live
+%% ===========================================================================
+
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "darkMode": true,
+    "background": "#0d1117",
+    "fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    "fontSize": "13px",
+    "primaryColor": "#161b22",
+    "primaryTextColor": "#e6edf3",
+    "primaryBorderColor": "#8b949e",
+    "lineColor": "#8b949e",
+    "secondaryColor": "#161b22",
+    "tertiaryColor": "#0d1117",
+    "clusterBkg": "#0d1117",
+    "clusterBorder": "#30363d",
+    "edgeLabelBackground": "#0d1117",
+    "titleColor": "#e6edf3"
+  },
+  "flowchart": { "curve": "basis", "nodeSpacing": 45, "rankSpacing": 50, "padding": 14 }
+}}%%
+
+flowchart TB
+
+    NAV(["navigateur du vendeur"])
+
+    subgraph APP["App Service · app-velmo-prod · B1"]
+        direction TB
+        G1{{"1 · garde-fou entrée<br/>règles regex déterministes"}}
+        M1["2 · mémoire — lecture<br/>faits durables + 30 tours<br/>WHERE user_id"]
+        LLM["3 · modèle + outils métier<br/>routage · action confirmée"]
+        G2{{"4 · garde-fou sortie<br/>PII · secret · toxicité"}}
+        M2["5 · mémoire — écriture<br/>messages + upsert des faits<br/>WHERE user_id"]
+        REFUS["refus poli"]
+        NEUTRE["réponse neutralisée"]
+    end
+
+    DBMEM[("velmo_memory<br/>PostgreSQL")]
+    OAI["Azure AI Foundry"]
+    REP(["réponse au vendeur"])
+
+    NAV --> G1
+    G1 -->|"bloqué"| REFUS
+    G1 -->|"autorisé"| M1
+    M1 --> LLM
+    LLM --> G2
+    G2 -->|"bloqué"| NEUTRE
+    G2 -->|"autorisé"| M2
+    REFUS --> M2
+    NEUTRE --> M2
+    M2 --> REP
+
+    M1 -. "SELECT" .-> DBMEM
+    M2 -. "INSERT · UPDATE" .-> DBMEM
+    LLM -. "appel du modèle" .-> OAI
+
+    classDef entree fill:#0b2b2f,stroke:#2dd4bf,stroke-width:1.5px,color:#e6edf3
+    classDef garde fill:#24110f,stroke:#f85149,stroke-width:1.5px,color:#e6edf3
+    classDef memoire fill:#0d1c2e,stroke:#58a6ff,stroke-width:1.5px,color:#e6edf3
+    classDef stockage fill:#0d1f14,stroke:#3fb950,stroke-width:1.5px,color:#e6edf3
+    classDef ia fill:#241026,stroke:#db61a2,stroke-width:1.5px,color:#e6edf3
+    classDef neutre fill:#161b22,stroke:#8b949e,stroke-width:1px,color:#e6edf3
+
+    class NAV,REP entree
+    class G1,G2 garde
+    class M1,M2 memoire
+    class DBMEM stockage
+    class OAI,LLM ia
+    class REFUS,NEUTRE neutre

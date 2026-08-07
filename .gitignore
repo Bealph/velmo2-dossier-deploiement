@@ -1,0 +1,25 @@
+# Documents de travail volontairement hors dépôt
+#
+# Ce ne sont pas des oublis : le pitch est un brouillon de soutenance à réviser
+# sur constats réels, et les questions au formateur sont un échange, pas un
+# livrable.
+pitch-soutenance.md
+dossier-deploiement/00-questions-formateur.md
+
+# Secrets : aucun fichier de ce type n'existe ici, la règle du projet interdit
+# d'y écrire une valeur réelle. Les motifs restent par sécurité.
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Outil de génération des schémas : dépendances installées localement
+node_modules/
+package-lock.json
+package.json
+
+# Système
+Thumbs.db
+desktop.ini
+.DS_Store

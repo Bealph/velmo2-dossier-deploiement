@@ -1,0 +1,129 @@
+%% ===========================================================================
+%% Velmo 2.0 — Schéma de déploiement cible sur Azure — VUE COMPLÈTE
+%%
+%% Les trois flux superposés sur une seule image : requête, secrets, journaux.
+%% Le brief demande d'indiquer « sur le schéma » où passent les secrets et où
+%% sont lus et écrits les journaux : cette vue le fait en un seul endroit.
+%%
+%% Pour la lecture et la soutenance, préférer les trois vues séparées :
+%%   01-flux-requete.mermaid · 02-trajet-secrets.mermaid · 03-trajet-journaux.mermaid
+%%
+%% Conventions de lecture :
+%%   trait plein       = flux d'une requête utilisateur
+%%   trait épais       = trajet des secrets et de la configuration
+%%   trait pointillé   = accès au stockage et écriture des journaux
+%%   cylindre          = stockage persistant
+%%   hexagone          = point de contrôle (garde-fou)
+%%   parallélogramme   = porteur de secrets
+%%
+%% Source éditable. Collable dans https://mermaid.live
+%% ===========================================================================
+
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "darkMode": true,
+    "background": "#0d1117",
+    "fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    "fontSize": "12px",
+    "primaryColor": "#161b22",
+    "primaryTextColor": "#e6edf3",
+    "primaryBorderColor": "#8b949e",
+    "lineColor": "#8b949e",
+    "secondaryColor": "#161b22",
+    "tertiaryColor": "#0d1117",
+    "clusterBkg": "#0d1117",
+    "clusterBorder": "#30363d",
+    "edgeLabelBackground": "#0d1117",
+    "titleColor": "#e6edf3"
+  },
+  "flowchart": { "curve": "basis", "nodeSpacing": 40, "rankSpacing": 50, "padding": 12 }
+}}%%
+
+flowchart TB
+
+    %% ---------------- Hors Azure ----------------
+    NAV(["navigateur du vendeur Velmo<br/>https://app-velmo-prod.azurewebsites.net<br/>HTTPS · SNI SSL inclus"])
+
+    PORTAIL["portail Azure — opérateur<br/>saisie manuelle des valeurs<br/>App Service › Configuration ›<br/>Paramètres d'application"]
+
+    GIT["dépôt GitHub — code source<br/>AUCUN SECRET<br/>.env ignoré · .env.example sans valeur"]
+
+    subgraph RG["GROUPE DE RESSOURCES UNIQUE · rg-velmo-prod · France Central"]
+
+        subgraph APP["App Service · app-velmo-prod · Basic B1 · Python 3.11 · Web sockets"]
+            direction TB
+            UI["interface Streamlit<br/>user_id = session authentifiée<br/>jamais issu du message (R3)"]
+            G1{{"1 · GARDE-FOU ENTRÉE<br/>1re ligne regex déterministe<br/>secret_leak · prompt_injection<br/>hate · violence · sexual · out_of_scope"}}
+            M1["2 · MÉMOIRE — LECTURE<br/>faits durables + 30 derniers tours<br/>filtre WHERE user_id (R3)"]
+            LLM["3 · APPEL LLM + OUTILS MÉTIER<br/>routage · action après confirmation<br/>escalade au-delà du seuil"]
+            G2{{"4 · GARDE-FOU SORTIE<br/>PII (IBAN · carte · mot de passe)<br/>secret_leak · toxicité"}}
+            M2["5 · MÉMOIRE — ÉCRITURE<br/>messages + upsert des faits<br/>filtre WHERE user_id (R3)"]
+            REP(["6 · RÉPONSE AU VENDEUR"])
+            CFG[/"variables d'environnement du processus<br/>injectées par App Service<br/>lues par os.getenv"/]
+        end
+
+        subgraph PG["Azure Database for PostgreSQL Flexible Server · psql-velmo-prod · Burstable B1ms"]
+            direction LR
+            DBMEM[("base velmo_memory<br/>faits_semantiques · messages<br/>clé d'isolation : user_id")]
+            DBMET[("base velmo<br/>catalogue · clients · commandes")]
+        end
+
+        OAI["Azure AI Foundry · oai-velmo-prod<br/>déploiement du modèle<br/>endpoint OpenAI-compatible /openai/v1"]
+
+        LOGS[("journaux App Service<br/>flux stdout / stderr<br/>lus en direct dans Log stream")]
+
+    end
+
+    %% ---------------- Flux d'une requête ----------------
+    NAV -->|"requête HTTPS"| UI
+    UI --> G1
+    G1 -->|"bloqué"| REFUS["refus poli<br/>message neutre, sans cause technique"]
+    G1 -->|"autorisé"| M1
+    M1 --> LLM
+    LLM --> G2
+    G2 -->|"bloqué"| NEUTRE["réponse neutralisée"]
+    G2 -->|"autorisé"| M2
+    REFUS --> M2
+    NEUTRE --> M2
+    M2 --> REP
+    REP -->|"réponse HTTPS"| NAV
+
+    %% ---------------- Accès aux données ----------------
+    M1 -. "SELECT ... WHERE user_id" .-> DBMEM
+    M2 -. "INSERT / UPDATE ... WHERE user_id" .-> DBMEM
+    LLM -. "appel du modèle<br/>clé + endpoint" .-> OAI
+    LLM -. "lecture métier<br/>commandes, stock" .-> DBMET
+
+    %% ---------------- Trajet des secrets ----------------
+    PORTAIL ==>|"SECRETS ET CONFIG<br/>saisis à la main, chiffrés au repos"| CFG
+    CFG ==>|"AZURE_AI_INFERENCE_API_KEY<br/>AZURE_AI_INFERENCE_ENDPOINT<br/>AZURE_AI_INFERENCE_MODEL"| LLM
+    CFG ==>|"VELMO_MEMORY_DB_URL"| M1
+    CFG ==>|"VELMO_MEMORY_DB_URL"| M2
+    CFG ==>|"VELMO_REFUND_CAP"| LLM
+    GIT -->|"déploiement du CODE SEUL<br/>Centre de déploiement"| APP
+
+    %% ---------------- Trajet des journaux ----------------
+    G1 -. "journal de blocage<br/>catégorie + horodatage<br/>PII et secrets masqués" .-> LOGS
+    G2 -. "journal de blocage<br/>catégorie + horodatage<br/>PII et secrets masqués" .-> LOGS
+    LLM -. "latence du tour · erreurs" .-> LOGS
+    LOGS -. "consultation Log stream<br/>latence · erreurs · taux de blocage" .-> PORTAIL
+
+    %% ---------------- Styles ----------------
+    classDef entree fill:#0b2b2f,stroke:#2dd4bf,stroke-width:1.5px,color:#e6edf3
+    classDef garde fill:#24110f,stroke:#f85149,stroke-width:1.5px,color:#e6edf3
+    classDef memoire fill:#0d1c2e,stroke:#58a6ff,stroke-width:1.5px,color:#e6edf3
+    classDef stockage fill:#0d1f14,stroke:#3fb950,stroke-width:1.5px,color:#e6edf3
+    classDef secret fill:#241a08,stroke:#d29922,stroke-width:1.5px,color:#e6edf3
+    classDef journal fill:#1a1024,stroke:#a371f7,stroke-width:1.5px,color:#e6edf3
+    classDef ia fill:#241026,stroke:#db61a2,stroke-width:1.5px,color:#e6edf3
+    classDef neutre fill:#161b22,stroke:#8b949e,stroke-width:1px,color:#e6edf3
+
+    class NAV,REP entree
+    class G1,G2 garde
+    class M1,M2 memoire
+    class DBMEM,DBMET stockage
+    class CFG,PORTAIL secret
+    class LOGS journal
+    class OAI,LLM ia
+    class GIT,UI,REFUS,NEUTRE neutre

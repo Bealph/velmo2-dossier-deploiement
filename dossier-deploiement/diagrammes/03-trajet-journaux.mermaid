@@ -1,0 +1,72 @@
+%% ===========================================================================
+%% Velmo 2.0 sur Azure — VUE 3 : le trajet des journaux
+%%
+%% Question à laquelle ce schéma répond :
+%%   « qu'est-ce qui est écrit, à quel moment de la chaîne, et où cela se
+%%     lit-il ? »
+%%
+%% Point d'attention porté par ce schéma : le trait en pointillé depuis les
+%% garde-fous est une ADAPTATION DE CODE À FAIRE. Aujourd'hui les blocages
+%% ne vivent que dans une liste en mémoire (guardrails/__init__.py:161-171),
+%% perdue au redémarrage et invisible dans le Log stream.
+%%
+%% Source éditable. Collable dans https://mermaid.live
+%% ===========================================================================
+
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "darkMode": true,
+    "background": "#0d1117",
+    "fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    "fontSize": "13px",
+    "primaryColor": "#161b22",
+    "primaryTextColor": "#e6edf3",
+    "primaryBorderColor": "#8b949e",
+    "lineColor": "#8b949e",
+    "secondaryColor": "#161b22",
+    "tertiaryColor": "#0d1117",
+    "clusterBkg": "#0d1117",
+    "clusterBorder": "#30363d",
+    "edgeLabelBackground": "#0d1117",
+    "titleColor": "#e6edf3"
+  },
+  "flowchart": { "curve": "basis", "nodeSpacing": 50, "rankSpacing": 55, "padding": 14 }
+}}%%
+
+flowchart TB
+
+    subgraph APP["App Service · app-velmo-prod"]
+        direction LR
+        G1{{"garde-fou entrée<br/>blocage"}}
+        LLMN["appel du modèle<br/>latence · erreur"]
+        G2{{"garde-fou sortie<br/>blocage"}}
+    end
+
+    OUT[/"sortie standard du processus<br/>stdout · stderr"/]
+
+    LS[("Log stream<br/>App Service · portail")]
+
+    OPER(["opérateur<br/>lecture en direct"])
+
+    SIGNAL["signaux relevés<br/>latence par conversation<br/>erreurs · taux de blocage"]
+
+    G1 -. "À IMPLÉMENTER<br/>catégorie · horodatage<br/>PII et secrets masqués" .-> OUT
+    G2 -. "À IMPLÉMENTER<br/>catégorie · horodatage<br/>PII et secrets masqués" .-> OUT
+    LLMN ==> OUT
+
+    OUT ==> LS
+    LS ==> OPER
+    OPER --> SIGNAL
+
+    classDef entree fill:#0b2b2f,stroke:#2dd4bf,stroke-width:1.5px,color:#e6edf3
+    classDef garde fill:#24110f,stroke:#f85149,stroke-width:1.5px,color:#e6edf3
+    classDef journal fill:#1a1024,stroke:#a371f7,stroke-width:1.5px,color:#e6edf3
+    classDef ia fill:#241026,stroke:#db61a2,stroke-width:1.5px,color:#e6edf3
+    classDef neutre fill:#161b22,stroke:#8b949e,stroke-width:1px,color:#e6edf3
+
+    class OPER entree
+    class G1,G2 garde
+    class OUT,LS journal
+    class LLMN ia
+    class SIGNAL neutre
