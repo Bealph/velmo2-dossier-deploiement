@@ -191,9 +191,9 @@ provisionnée. Dernière mise à jour : **2026-08-07**.
 | 4   | Provisionner les ressources Azure                | `infra/` + `preuves/`                                                                                                        | bloqué par la validation                                                    |
 | 5   | Déployer l'agent et le connecter au service d'IA | URL publique                                                                                                                 | bloqué par la validation                                                    |
 | 6   | Mémoire long terme persistante et isolée         | preuve R2 + R3                                                                                                               | bloqué par la validation                                                    |
-| 7   | Vérifier garde-fous et secrets en production     | `preuves/`                                                                                                                   | bloqué par la validation                                                    |
+| 7   | Vérifier garde-fous et secrets en production     | `preuves/protocole-tests-acceptance.md`                                                                                      | bloqué par la validation                                                    |
 | 8   | Premiers signaux de suivi                        | relevé latence, coût, taux de blocage                                                                                        | bloqué par la validation                                                    |
-| 9   | Documenter et présenter                          | `runbook/` + `pitch-soutenance.md`                                                                                           | trame de soutenance ébauchée, à réviser sur constats réels                  |
+| 9   | Documenter et présenter                          | `runbook/deployer-et-exploiter-velmo-sur-azure.md` + `pitch-soutenance.md`                                                   | trame de soutenance ébauchée, à réviser sur constats réels                  |
 
 **Adaptations de code à faire après validation** (dans une copie, jamais dans TP7 — règle 1) :
 
