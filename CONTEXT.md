@@ -195,14 +195,16 @@ provisionnée. Dernière mise à jour : **2026-08-07**.
 | 8   | Premiers signaux de suivi                        | relevé latence, coût, taux de blocage                                                                                        | bloqué par la validation                                                    |
 | 9   | Documenter et présenter                          | `runbook/deployer-et-exploiter-velmo-sur-azure.md` + `pitch-soutenance.md`                                                   | trame de soutenance ébauchée, à réviser sur constats réels                  |
 
-**Adaptations de code à faire après validation** (dans une copie, jamais dans TP7 — règle 1) :
+**Six adaptations de code à faire après validation** (dans une copie, jamais dans TP7 — règle 1) :
 
-| Adaptation                                      | Emplacement                                       | Pourquoi                                                                     |
-| ----------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Accepter une URL de connexion pour la mémoire   | `memory/models.py:127-145`, figé sur `sqlite:///` | Sans elle, **R2 est indémontrable**                                          |
-| Émettre les blocages de garde-fous sur `stdout` | `guardrails/__init__.py:161-171`                  | Sans elle, rien de visible dans le Log stream (points 7 et 8)                |
-| Externaliser le seuil de remboursement          | `tools/_common.py:11` (`REFUND_CAP = 50.0`)       | Exigence du brief : les seuils de garde-fous sont configurables hors du code |
-| Compléter `.env.example`                        | dépôt TP7                                         | Documentation des noms de paramètres, sans valeur                            |
+| Adaptation                                      | Emplacement                                       | Pourquoi                                                                       |
+| ----------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Accepter une URL de connexion pour la mémoire   | `memory/models.py:127-145`, figé sur `sqlite:///` | Sans elle, **R2 est indémontrable**                                            |
+| Émettre les blocages de garde-fous sur `stdout` | `guardrails/__init__.py:161-171`                  | Sans elle, rien de visible dans le Log stream (points 7 et 8)                  |
+| Externaliser le seuil de remboursement          | `tools/_common.py:11` (`REFUND_CAP = 50.0`)       | Exigence du brief : les seuils de garde-fous sont configurables hors du code   |
+| Interrupteur `VELMO_MODERATOR`                  | `agent.py:348` (`build_default_agent`)            | Décision 1 : la 2e ligne de garde-fous ne doit pas s'activer par effet de bord |
+| Interrupteur `VELMO_DEBUG_PANEL`                | `chat_app.py:69-142`                              | Décision 4 : ne rien exposer par défaut, activable pour la démonstration       |
+| Compléter `.env.example`                        | dépôt TP7                                         | Documentation des noms de paramètres, sans valeur ; retirer `grok-4.3`         |
 
 ## 8. Questions ouvertes
 
@@ -214,11 +216,25 @@ provisionnée. Dernière mise à jour : **2026-08-07**.
   **Condition de déploiement** : inclure `kb/docs/` et exécuter depuis l'arborescence du dépôt
   (`kb_store.py:15` résout un chemin relatif au dépôt, absent de la roue `pyproject.toml:50-51` et
   du `Dockerfile`) — sinon la FAQ est vide sans qu'aucune erreur ne soit levée.
-- **Nom exact du modèle déployé** dans Azure OpenAI / AI Foundry : à fixer au provisionnement
-  (incohérences dans le dépôt : `grok-4.3`, `gpt-5.4-mini`, défaut `gpt-5.6-terra`, README « Kimi-K2.6 »).
-  C'est de la config, pas un secret.
+- ~~**Nom exact du modèle déployé.**~~ **Tranché le 2026-08-07** : `grok-4.3` écarté, on part du
+  modèle par défaut du code. Nuance à ne pas manquer : ce que le client envoie est le **nom du
+  déploiement** Azure, pas celui du modèle du catalogue. `AZURE_AI_INFERENCE_MODEL` est donc
+  renseigné explicitement plutôt que laissé au défaut `gpt-5.6-terra` de `llm.py:86`
+  (`02-secrets-et-config.md`, décision 5).
+- ~~**LLM-juge de 2e ligne.**~~ **Tranché le 2026-08-07** : interrupteur `VELMO_MODERATOR` créé
+  (l'apprenant), valeur `true` en ligne (le formateur). L'interrupteur évite que la configuration
+  soit un effet de bord de la présence d'une clé, et garde la suite de tests déterministe hors ligne
+  (décision 1).
+- ~~**Panneau de démonstration de l'interface.**~~ **Tranché le 2026-08-07** : conditionné à
+  `VELMO_DEBUG_PANEL`, absent par défaut, activé le temps de la soutenance (décision 4).
+- ~~**Moteur de construction du déploiement.**~~ **Tranché le 2026-08-07** : « App Service Build
+  Service », le fournisseur par défaut créant une identité managée placée hors périmètre par §3
+  (décision 6).
 - **Émission des blocages de garde-fous sur `stdout`** pour le Log stream Azure : petite addition de
   code à prévoir (aujourd'hui les blocages ne vivent que dans `GuardrailEngine.events`).
+
+**Plus aucune question ouverte ne bloque le provisionnement.** Il reste la validation du dossier par
+le formateur, et les six adaptations de code listées au §7.
 
 ## 9. Livrables attendus
 

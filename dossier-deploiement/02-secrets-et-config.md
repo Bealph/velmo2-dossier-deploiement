@@ -50,9 +50,11 @@ l'environnement. Un inventaire construit par recherche de `os.getenv` seule l'au
 | Paramètre                     | Rôle                           | Lu dans le code                       | Valeur cible                |
 | ----------------------------- | ------------------------------ | ------------------------------------- | --------------------------- |
 | `AZURE_AI_INFERENCE_ENDPOINT` | endpoint du service d'IA       | `llm.py:68`                           | URL en `/openai/v1`         |
-| `AZURE_AI_INFERENCE_MODEL`    | nom du déploiement du modèle   | `llm.py:86`                           | à fixer au provisionnement  |
+| `AZURE_AI_INFERENCE_MODEL`    | nom du déploiement du modèle   | `llm.py:86`                           | **renseigné** (§2.3)        |
 | `AZURE_JUDGE_ENDPOINT`        | endpoint du LLM-juge           | `moderator.py:82`                     | non renseigné (§2.3)        |
-| `AZURE_JUDGE_MODEL`           | modèle du LLM-juge             | `moderator.py:93`                     | **décision requise** (§2.3) |
+| `AZURE_JUDGE_MODEL`           | modèle du LLM-juge             | `moderator.py:93`                     | même déploiement (§2.3)     |
+| `VELMO_MODERATOR`             | interrupteur du LLM-juge       | **à créer** (`agent.py:348`)          | `true` (§2.3)               |
+| `VELMO_DEBUG_PANEL`           | affichage du panneau de démo   | **à créer** (`chat_app.py:69-142`)    | non renseigné (§2.3)        |
 | `VELMO_REFUND_CAP`            | seuil d'escalade remboursement | **à créer** (`tools/_common.py:11`)   | `50`                        |
 | `VELMO_RECENT_MESSAGES`       | fenêtre d'historique (R1)      | **à créer** (`memory/__init__.py:85`) | `60`                        |
 | `VELMO_TOKEN_BUDGET`          | budget de contexte mémoire     | **à créer** (`memory/__init__.py:87`) | `2000`                      |
@@ -156,10 +158,11 @@ fonctionne donc tel quel en ligne, sans adaptation de la configuration.
 4. Contrôler dans **Log stream** que le démarrage se passe sans erreur de configuration.
 5. Consigner dans le runbook la **liste des noms** saisis, **jamais les valeurs**.
 
-## 2.3 Trois décisions de configuration à acter
+## 2.3 Six décisions de configuration — toutes actées le 2026-08-07
 
-Ces points sont issus de la lecture du code et n'apparaissent pas dans le brief. Ils doivent être
-tranchés avant le provisionnement, car ils ont un effet direct en production.
+Ces points sont issus de la lecture du code et n'apparaissent pas dans le brief. Ils devaient être
+tranchés avant le provisionnement, car ils ont un effet direct en production. **Ils l'ont été le
+2026-08-07**, en arbitrage avec le formateur ; chaque décision porte sa justification ci-dessous.
 
 ### Décision 1 — Le LLM-juge s'activerait tout seul en production
 
@@ -191,6 +194,69 @@ le juge est appelé, il échoue, et rien ne bloque.
 modèle à déployer, la 2e ligne de garde-fous devient réellement effective en ligne — un atout pour
 le point 7 du brief — et l'on évite le gaspillage de l'option (b). Si le coût par appel devenait un
 problème, basculer sur (c).
+
+#### Décision actée le 2026-08-07 : **(a) et (c) combinées**
+
+Le formateur retient (a). L'apprenant retient l'interrupteur explicite, au motif que la configuration
+ne doit pas être un **effet de bord de la présence d'une clé**. Les deux sont compatibles, et leur
+combinaison vaut mieux que chacune prise seule :
+
+| Ce qui est fait                                           | Ce que ça résout                                                     |
+| --------------------------------------------------------- | -------------------------------------------------------------------- |
+| Créer l'interrupteur `VELMO_MODERATOR` (option c)         | la configuration devient **lisible et intentionnelle**               |
+| Le renseigner à `true` en ligne (option a)                | la 2e ligne de garde-fous est réellement effective, comme recommandé |
+| Pointer `AZURE_JUDGE_MODEL` sur le déploiement de l'agent | aucun second modèle à déployer, aucun appel en échec                 |
+| Variable **absente** en local et en CI                    | la suite de tests reste déterministe, sans appel réseau              |
+
+Le point décisif est le dernier : l'interrupteur ne sert pas seulement à documenter une intention, il
+**sépare le comportement en ligne du comportement testé** au lieu de les faire dépendre tous deux de
+la présence d'une clé. Sans lui, exécuter la suite de tests sur un poste où un `.env` traîne
+changerait silencieusement ce qui est testé.
+
+Valeur retenue en production : `VELMO_MODERATOR = true`. Basculer à `false` reproduit exactement la
+configuration validée hors ligne — c'est **un seul paramètre**, sans redéploiement de code.
+
+### Décision 4 — Panneau de démonstration de l'interface
+
+**Actée le 2026-08-07.** Le bandeau latéral et le panneau « coulisses » sont conditionnés à un
+paramètre d'application **`VELMO_DEBUG_PANEL`**, absent ou `false` par défaut.
+
+Le conflit était réel : ces panneaux exposent de la configuration interne — type du client LLM, état
+du garde-fou de 2e ligne, catégorie de blocage, `user_id` — ce que le point 7 du brief demande de ne
+pas laisser voir. Mais ce sont **aussi** eux qui permettent de prouver la mémoire et les garde-fous
+aux points 6 et 7.
+
+L'interrupteur tranche sans sacrifier : l'application ne montre rien par défaut, ce qui est
+démontrable ; on l'active le temps de la soutenance, ce qui est également démontrable. Les deux
+propriétés sont prouvables séparément, ce qui n'était pas le cas avant.
+
+### Décision 5 — Nom du modèle déployé
+
+**Actée le 2026-08-07.** `grok-4.3` est écarté ; on part sur le modèle par défaut du code.
+
+**Attention à une confusion possible.** Le « défaut » est celui du code : `gpt-5.6-terra`
+(`llm.py:86`). Or ce que le client envoie comme paramètre `model` doit correspondre au **nom du
+déploiement** créé dans Azure AI Foundry, pas au nom du modèle du catalogue. Deux façons de les faire
+coïncider :
+
+| Voie                                                       | Ce qu'elle implique                                          |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+| Nommer le déploiement `gpt-5.6-terra` à sa création        | le défaut du code fonctionne sans rien renseigner            |
+| **Renseigner `AZURE_AI_INFERENCE_MODEL`** avec le nom réel | **retenu** : explicite, et résiste à un changement de modèle |
+
+La seconde est retenue pour la même raison que la décision 1 : faire dépendre la production d'une
+valeur par défaut enfouie dans le code est exactement le genre d'implicite qu'on cherche à éliminer.
+`.env.example` sera corrigé pour ne plus annoncer `grok-4.3`.
+
+### Décision 6 — Moteur de construction du déploiement
+
+**Actée le 2026-08-07.** Centre de déploiement → **Changer de fournisseur** → **App Service Build
+Service**.
+
+Le fournisseur par défaut, GitHub Actions, crée une **identité managée affectée par l'utilisateur** et
+écrit un fichier de workflow dans le dépôt. Or `CONTEXT.md` §3 place l'identité managée et RBAC hors
+périmètre. Le moteur natif reste dans le périmètre validé, et correspond au « clique-bouton » au sens
+strict : rien à écrire, aucun fichier ajouté au dépôt de l'application.
 
 ### Décision 2 — Observabilité Langfuse : ne pas la brancher en ligne
 
