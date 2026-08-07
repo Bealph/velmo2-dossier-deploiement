@@ -52,8 +52,8 @@ l'environnement. Un inventaire construit par recherche de `os.getenv` seule l'au
 | `AZURE_AI_INFERENCE_ENDPOINT` | endpoint du service d'IA       | `llm.py:68`                           | URL en `/openai/v1`         |
 | `AZURE_AI_INFERENCE_MODEL`    | nom du déploiement du modèle   | `llm.py:86`                           | **renseigné** (§2.3)        |
 | `AZURE_JUDGE_ENDPOINT`        | endpoint du LLM-juge           | `moderator.py:82`                     | non renseigné (§2.3)        |
-| `AZURE_JUDGE_MODEL`           | modèle du LLM-juge             | `moderator.py:93`                     | même déploiement (§2.3)     |
-| `VELMO_MODERATOR`             | interrupteur du LLM-juge       | **à créer** (`agent.py:348`)          | `true` (§2.3)               |
+| `AZURE_JUDGE_MODEL`           | modèle du LLM-juge             | `moderator.py:93`                     | non renseigné (§2.3)        |
+| `VELMO_MODERATOR`             | interrupteur du LLM-juge       | **à créer** (`agent.py:348`)          | `false` (§2.3)              |
 | `VELMO_DEBUG_PANEL`           | affichage du panneau de démo   | **à créer** (`chat_app.py:69-142`)    | non renseigné (§2.3)        |
 | `VELMO_REFUND_CAP`            | seuil d'escalade remboursement | **à créer** (`tools/_common.py:11`)   | `50`                        |
 | `VELMO_RECENT_MESSAGES`       | fenêtre d'historique (R1)      | **à créer** (`memory/__init__.py:85`) | `60`                        |
@@ -67,8 +67,10 @@ lexical `LocalKB`. `LANGFUSE_PUBLIC_KEY` absente désactive toute l'observabilit
 règlent pas un comportement : elles en **choisissent** un.
 
 **Défauts en dur à connaître.** `AZURE_AI_INFERENCE_MODEL` vaut `gpt-5.6-terra` par défaut et
-`AZURE_JUDGE_MODEL` vaut `gpt-5.4-mini` : deux noms qui ne correspondront probablement à aucun
-déploiement réel. Les renseigner explicitement évite un échec au premier appel.
+`AZURE_JUDGE_MODEL` vaut `gpt-5.4-mini` : deux noms qui ne correspondront à aucun déploiement réel.
+Le premier est donc **renseigné explicitement** (§2.3, décision 5). Le second devient sans objet,
+le juge étant désactivé (§2.3, décision 1) — c'est d'ailleurs l'un des intérêts de cette décision :
+un défaut qui ne correspond à rien ne peut plus provoquer d'appel en échec.
 
 ### C. Paramètres propres à la plateforme App Service
 
@@ -184,7 +186,7 @@ sûrs — mais on paierait un appel réseau inutile et de la latence à chaque t
 | ------------------------------------------ | -------------------------------------- | ------------------------------- |
 | **(a)** renseigner `AZURE_JUDGE_MODEL`     | juge actif, garde-fous renforcés       | 1 appel LLM par tour généré     |
 | (b) ne rien renseigner                     | juge appelé mais toujours en échec     | latence et appels inutiles      |
-| (c) interrupteur `VELMO_MODERATOR_ENABLED` | comportement conforme à `version.yaml` | une petite modification de code |
+| (c) interrupteur `VELMO_MODERATOR`         | comportement conforme à `version.yaml` | une petite modification de code |
 
 L'option (a) demande le nom du modèle réellement déployé, et coûte environ 1 s de latence
 supplémentaire par tour d'après ce qui a été observé en local. L'option (b) échoue en *fail-open* :
@@ -195,26 +197,37 @@ modèle à déployer, la 2e ligne de garde-fous devient réellement effective en
 le point 7 du brief — et l'on évite le gaspillage de l'option (b). Si le coût par appel devenait un
 problème, basculer sur (c).
 
-#### Décision actée le 2026-08-07 : **(a) et (c) combinées**
+#### Décision actée le 2026-08-07 : **(c) — juge désactivé, par un interrupteur explicite**
 
-Le formateur retient (a). L'apprenant retient l'interrupteur explicite, au motif que la configuration
-ne doit pas être un **effet de bord de la présence d'une clé**. Les deux sont compatibles, et leur
-combinaison vaut mieux que chacune prise seule :
+**Le formateur demande de désactiver le LLM-juge.** Et c'est précisément ce qu'on ne peut **pas**
+faire sans toucher au code : `version.yaml:26` déclare `moderator: false` mais ne pilote rien, et
+`get_moderator()` construit le juge dès que l'endpoint et la clé du service d'IA sont présents —
+c'est-à-dire toujours, puisqu'ils sont indispensables.
 
-| Ce qui est fait                                           | Ce que ça résout                                                     |
-| --------------------------------------------------------- | -------------------------------------------------------------------- |
-| Créer l'interrupteur `VELMO_MODERATOR` (option c)         | la configuration devient **lisible et intentionnelle**               |
-| Le renseigner à `true` en ligne (option a)                | la 2e ligne de garde-fous est réellement effective, comme recommandé |
-| Pointer `AZURE_JUDGE_MODEL` sur le déploiement de l'agent | aucun second modèle à déployer, aucun appel en échec                 |
-| Variable **absente** en local et en CI                    | la suite de tests reste déterministe, sans appel réseau              |
+L'option (c) n'est donc pas une préférence de style : **c'est la seule façon d'obtenir le
+comportement demandé.** L'interrupteur devient la condition de la consigne, pas son ornement.
 
-Le point décisif est le dernier : l'interrupteur ne sert pas seulement à documenter une intention, il
-**sépare le comportement en ligne du comportement testé** au lieu de les faire dépendre tous deux de
-la présence d'une clé. Sans lui, exécuter la suite de tests sur un poste où un `.env` traîne
-changerait silencieusement ce qui est testé.
+| Ce qui est fait                              | Ce que ça résout                                           |
+| -------------------------------------------- | ---------------------------------------------------------- |
+| Créer l'interrupteur `VELMO_MODERATOR`       | rend la désactivation **possible** — elle ne l'était pas   |
+| Le laisser à `false` en ligne                | comportement demandé par le formateur                      |
+| Ne **pas** renseigner `AZURE_JUDGE_*`        | aucun appel réseau, aucun modèle supplémentaire à déployer |
+| Variable également absente en local et en CI | la suite de tests reste déterministe                       |
 
-Valeur retenue en production : `VELMO_MODERATOR = true`. Basculer à `false` reproduit exactement la
-configuration validée hors ligne — c'est **un seul paramètre**, sans redéploiement de code.
+**Trois conséquences favorables**, qu'il vaut la peine de nommer plutôt que de les subir :
+
+1. **Les garde-fous en ligne sont exactement ceux validés hors ligne** — la 1re ligne regex, seule.
+   C'est le meilleur appui possible pour l'exigence « ce qui marchait en local marche en ligne » :
+   il n'y a plus d'écart du tout entre les deux configurations, donc plus rien à justifier.
+2. **Un appel LLM de moins par tour généré**, donc moins de latence et moins de crédit consommé —
+   ce qui compte avec 100 $ d'Azure for Students.
+3. Le mécanisme de *fail-open* du juge (`moderator.py:63-64`) devient sans objet : on ne dépend plus
+   d'un composant qui échouerait silencieusement.
+
+**La limite, à dire plutôt qu'à cacher** : la 2e ligne de défense n'existe pas en ligne. Une
+formulation malveillante qu'aucun motif regex ne couvre passera le garde-fou d'entrée. Le prompt
+système et le filtre de sortie restent en place, mais c'est un choix assumé — et réversible par
+**un seul paramètre**, sans redéploiement de code, le jour où l'on voudrait l'éprouver.
 
 ### Décision 4 — Panneau de démonstration de l'interface
 

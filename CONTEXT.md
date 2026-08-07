@@ -202,7 +202,7 @@ provisionnée. Dernière mise à jour : **2026-08-07**.
 | Accepter une URL de connexion pour la mémoire   | `memory/models.py:127-145`, figé sur `sqlite:///` | Sans elle, **R2 est indémontrable**                                            |
 | Émettre les blocages de garde-fous sur `stdout` | `guardrails/__init__.py:161-171`                  | Sans elle, rien de visible dans le Log stream (points 7 et 8)                  |
 | Externaliser le seuil de remboursement          | `tools/_common.py:11` (`REFUND_CAP = 50.0`)       | Exigence du brief : les seuils de garde-fous sont configurables hors du code   |
-| Interrupteur `VELMO_MODERATOR`                  | `agent.py:348` (`build_default_agent`)            | Décision 1 : la 2e ligne de garde-fous ne doit pas s'activer par effet de bord |
+| Interrupteur `VELMO_MODERATOR`                  | `agent.py:348` (`build_default_agent`)            | Décision 1 : sans lui, le juge ne peut pas être désactivé comme demandé |
 | Interrupteur `VELMO_DEBUG_PANEL`                | `chat_app.py:69-142`                              | Décision 4 : ne rien exposer par défaut, activable pour la démonstration       |
 | Compléter `.env.example`                        | dépôt TP7                                         | Documentation des noms de paramètres, sans valeur ; retirer `grok-4.3`         |
 
@@ -221,9 +221,11 @@ provisionnée. Dernière mise à jour : **2026-08-07**.
   déploiement** Azure, pas celui du modèle du catalogue. `AZURE_AI_INFERENCE_MODEL` est donc
   renseigné explicitement plutôt que laissé au défaut `gpt-5.6-terra` de `llm.py:86`
   (`02-secrets-et-config.md`, décision 5).
-- ~~**LLM-juge de 2e ligne.**~~ **Tranché le 2026-08-07** : interrupteur `VELMO_MODERATOR` créé
-  (l'apprenant), valeur `true` en ligne (le formateur). L'interrupteur évite que la configuration
-  soit un effet de bord de la présence d'une clé, et garde la suite de tests déterministe hors ligne
+- ~~**LLM-juge de 2e ligne.**~~ **Tranché le 2026-08-07** : **désactivé en ligne**, sur consigne du
+  formateur. Or il ne peut pas l'être sans modification de code — `version.yaml` ne pilote rien et
+  `get_moderator()` s'active dès que la clé principale est présente. L'interrupteur
+  `VELMO_MODERATOR` (`false` en ligne) est donc la **condition** de la consigne, pas une préférence.
+  Effet de bord favorable : les garde-fous en ligne deviennent exactement ceux validés hors ligne
   (décision 1).
 - ~~**Panneau de démonstration de l'interface.**~~ **Tranché le 2026-08-07** : conditionné à
   `VELMO_DEBUG_PANEL`, absent par défaut, activé le temps de la soutenance (décision 4).
