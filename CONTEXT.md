@@ -75,8 +75,9 @@ Dépôt source : `../TP7_Reconstruire-agent-de-zero_(memoire, garde-fous et MLOp
 - Dépendances système non-Python : **aucune dans le cœur**. La seule lourdeur native vient de l'extra
   `vector` (`chromadb`, `sentence-transformers` → **PyTorch ~2,5 Go**) et d'un **serveur Chroma**
   séparé (`docker-compose.yml`). Le `Makefile` exclut volontairement `vector` de l'installation courante.
-- WebSockets / streaming : **oui**, Streamlit s'appuie sur des WebSockets (Tornado). À activer côté
-  App Service (option « Web sockets »).
+- WebSockets / streaming : **oui**, Streamlit s'appuie sur des WebSockets (Tornado). **Rien à
+  activer** : ils sont toujours actifs sur App Service Linux, l'interrupteur « Web sockets » du
+  portail ne visant que Windows (FAQ App Service sur Linux, vérifié le 2026-08-07).
 
 ### 5.2 Agent
 - Orchestration : `src/velmo/agent.py`, classe `Agent.respond` → `_respond`. La chaîne imposée est

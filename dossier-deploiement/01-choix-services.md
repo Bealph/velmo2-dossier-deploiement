@@ -19,15 +19,20 @@ voir §1.5 pour la procédure de relevé des prix réels.
 | Contrainte constatée                     | Référence                            | Conséquence                             |
 | ---------------------------------------- | ------------------------------------ | --------------------------------------- |
 | Python 3.11 strict                       | `pyproject.toml:5`                   | pile Python 3.11 native (a)             |
-| Interface web = Streamlit                | `scripts/chat_app.py`, `Makefile:35` | port HTTP + **Web sockets** (b)         |
+| Interface web = Streamlit                | `scripts/chat_app.py`, `Makefile:35` | port HTTP + **WebSockets** (b)          |
 | **Aucune** dépendance système non-Python | `pyproject.toml:6-12`                | rien n'oblige au conteneur (c)          |
 | Extra `vector` = PyTorch ~2,5 Go         | `pyproject.toml:16-19`               | **seul** argument pour le conteneur (d) |
 | Le `Dockerfile` du dépôt lance le CLI    | `Dockerfile:16`                      | non réutilisable en production (e)      |
 
 **(a)** Contrainte `>=3.11,<3.12`, satisfaite par la pile d'exécution « Python 3.11 » d'App Service.
 
-**(b)** Streamlit s'appuie sur Tornado, donc sur des WebSockets : l'option « Web sockets » doit être
-activée côté App Service, sinon l'interface reste muette.
+**(b)** Streamlit s'appuie sur Tornado, donc sur des WebSockets. **Rien n'est à activer** :
+« les WebSockets sont pris en charge sur les applications Linux ; la propriété ARM `webSocketsEnabled`
+ne s'applique pas aux applications Linux, les WebSockets y étant toujours actifs »
+([FAQ App Service sur Linux](https://learn.microsoft.com/en-us/troubleshoot/azure/app-service/faqs-app-service-linux-new)).
+L'interrupteur « Web sockets » visible dans le portail ne concerne que les applications Windows.
+Une version antérieure de ce dossier demandait de l'activer : c'était une étape inexistante,
+corrigée le 2026-08-07.
 
 **(c)** Le cœur ne dépend que de pydantic, dotenv, SQLAlchemy, psycopg et Alembic.
 
@@ -76,7 +81,7 @@ un service Chroma. Total **supérieur** et moins prévisible qu'un B1 fixe.
 
 #### Critère « adéquation à Velmo 2.0 »
 
-**App Service** — couvre tout le périmètre évalué : Streamlit avec Web sockets activables, Python
+**App Service** — couvre tout le périmètre évalué : Streamlit (WebSockets toujours actifs sur Linux), Python
 3.11, connexion à Postgres managé, secrets en paramètres d'application, journaux via **Log stream**.
 Le seul manque est la recherche **sémantique** de la FAQ : 1,75 Go de RAM et 10 Go de disque rendent
 PyTorch et Chroma inadaptés. La FAQ elle-même reste servie par le repli lexical `LocalKB`, sans
@@ -88,7 +93,7 @@ coût supérieurs.
 
 ### Décision retenue
 
-**Azure App Service (Linux), plan Basic B1, avec Web sockets activés.**
+**Azure App Service (Linux), plan Basic B1.**
 La **FAQ RAG (Chroma et embeddings) est volontairement mise hors périmètre de la version en ligne.**
 
 ### Justification
@@ -186,6 +191,22 @@ Déposer le fichier `.sqlite` dans un Blob **déplace le problème au lieu de le
 ne supporte pas les écritures concurrentes de plusieurs sessions, et il faudrait le télécharger puis
 le réenvoyer à chaque tour. R3 resterait entièrement portée par le code, sans appui du service.
 Contraire à l'esprit de R2, qui demande une mémoire réellement partagée.
+
+**Microsoft écarte d'ailleurs SQLite elle-même sur App Service**, et pour une raison qui vaut aussi
+pour le disque de l'application, pas seulement pour le Blob :
+
+> « Le système de fichiers de votre application est un partage réseau monté. Cela permet les
+> scénarios de montée en charge où votre code s'exécute sur plusieurs hôtes. Malheureusement, cela
+> empêche l'usage de fournisseurs de bases de données fichier comme SQLite, puisqu'il n'est pas
+> possible d'acquérir des verrous exclusifs sur le fichier de base. Nous recommandons un service de
+> base de données managé comme Azure SQL, Azure Database for MySQL ou **Azure Database for
+> PostgreSQL**. »
+>
+> — [FAQ App Service sur Linux](https://learn.microsoft.com/en-us/troubleshoot/azure/app-service/faqs-app-service-linux-new), consultée le 2026-08-07
+
+Ce n'est donc pas une préférence d'architecte : c'est une **contre-indication documentée du
+fournisseur**, qui nomme précisément le service retenu ici. Le point est décisif face à l'objection
+« pourquoi ne pas simplement déposer le fichier SQLite quelque part dans le cloud ? ».
 
 #### Compte de stockage — Table Storage — écarté
 

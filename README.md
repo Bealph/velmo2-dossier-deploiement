@@ -18,24 +18,24 @@ conditionnée à la validation du dossier par le formateur — c'est la porte d'
 
 ## Les quatre exigences non négociables
 
-| Réf | Exigence                                       | Comment elle est prouvée                                     |
-| --- | ---------------------------------------------- | ------------------------------------------------------------ |
-| R2  | Mémoire long terme persistante inter-session   | Un fait donné en session 1 est retrouvé en session 2         |
-| R3  | Isolation stricte par utilisateur              | Un second utilisateur n'a pas accès aux faits du premier     |
-| G   | Garde-fous entrée et sortie effectifs en ligne | Injection de prompt rejouée : blocage **et** journalisation   |
-| S   | Aucun secret dans le code source               | Rien dans ce dépôt, tout en paramètres d'application Azure   |
+| Réf | Exigence                                       | Comment elle est prouvée                                    |
+| --- | ---------------------------------------------- | ----------------------------------------------------------- |
+| R2  | Mémoire long terme persistante inter-session   | Un fait donné en session 1 est retrouvé en session 2        |
+| R3  | Isolation stricte par utilisateur              | Un second utilisateur n'a pas accès aux faits du premier    |
+| G   | Garde-fous entrée et sortie effectifs en ligne | Injection de prompt rejouée : blocage **et** journalisation |
+| S   | Aucun secret dans le code source               | Rien dans ce dépôt, tout en paramètres d'application Azure  |
 
 ## Architecture retenue
 
 Trois ressources dans un groupe unique, qu'on peut supprimer d'un seul geste en fin de brief.
 
-| Rôle              | Service                                        | Niveau                     |
-| ----------------- | ---------------------------------------------- | -------------------------- |
-| Héberger et parler | Azure App Service (Linux), Web sockets activés | Basic B1                   |
-| Se souvenir       | Azure Database for PostgreSQL Flexible Server  | Burstable B1ms, deux bases |
-| Réfléchir         | Azure AI Foundry                               | endpoint `/openai/v1`      |
-| Porter les secrets | Paramètres d'application de l'App Service      | sans coffre de secrets     |
-| Observer          | Log stream de l'App Service                    | —                          |
+| Rôle               | Service                                       | Niveau                     |
+| ------------------ | --------------------------------------------- | -------------------------- |
+| Héberger et parler | Azure App Service (Linux)                     | Basic B1                   |
+| Se souvenir        | Azure Database for PostgreSQL Flexible Server | Burstable B1ms, deux bases |
+| Réfléchir          | Azure AI Foundry                              | endpoint `/openai/v1`      |
+| Porter les secrets | Paramètres d'application de l'App Service     | sans coffre de secrets     |
+| Observer           | Log stream de l'App Service                   | —                          |
 
 Le déploiement **ne change que les substrats**, pas la logique : fichier local vers base managée,
 fournisseur de modèle vers Azure AI Foundry. La chaîne de traitement reste celle du code, dans le
@@ -45,12 +45,12 @@ même ordre — garde-fou d'entrée, lecture mémoire, modèle, garde-fou de sor
 
 Dans cet ordre : chaque document suppose le précédent.
 
-| Document                                                            | Ce qu'il tranche                                                    |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| [CONTEXT.md](CONTEXT.md)                                            | l'état réel du code source, références `fichier:ligne` à l'appui    |
-| [01-choix-services.md](dossier-deploiement/01-choix-services.md)    | App Service ou conteneur, et quel stockage pour la mémoire          |
+| Document                                                               | Ce qu'il tranche                                                 |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| [CONTEXT.md](CONTEXT.md)                                               | l'état réel du code source, références `fichier:ligne` à l'appui |
+| [01-choix-services.md](dossier-deploiement/01-choix-services.md)       | App Service ou conteneur, et quel stockage pour la mémoire       |
 | [02-secrets-et-config.md](dossier-deploiement/02-secrets-et-config.md) | ce qui sort du code, et où cela va côté Azure                    |
-| [03-schema-cible.md](dossier-deploiement/03-schema-cible.md)        | le schéma cible, le trajet des secrets, celui des journaux          |
+| [03-schema-cible.md](dossier-deploiement/03-schema-cible.md)           | le schéma cible, le trajet des secrets, celui des journaux       |
 
 `CONTEXT.md` n'est pas une introduction : c'est l'**inventaire vérifié du code existant**, et tout
 le dossier s'appuie dessus. Aucune affirmation sur l'application n'y figure sans référence.
@@ -59,12 +59,12 @@ le dossier s'appuie dessus. Aucune affirmation sur l'application n'y figure sans
 
 Quatre vues, une par question, plus une vue complète en annexe.
 
-| Vue | Question                                       |
-| --- | ---------------------------------------------- |
-| 1   | Que traverse un message, et dans quel ordre ?  |
-| 2   | D'où viennent les secrets, où vont-ils ?       |
+| Vue | Question                                         |
+| --- | ------------------------------------------------ |
+| 1   | Que traverse un message, et dans quel ordre ?    |
+| 2   | D'où viennent les secrets, où vont-ils ?         |
 | 3   | Qu'écrit-on dans les journaux, et où le lit-on ? |
-| 4   | Les trois flux réunis (preuve du groupe unique) |
+| 4   | Les trois flux réunis (preuve du groupe unique)  |
 
 ```text
 dossier-deploiement/diagrammes/

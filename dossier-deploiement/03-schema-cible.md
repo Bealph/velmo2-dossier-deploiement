@@ -246,7 +246,7 @@ flowchart TB
 
     subgraph RG["GROUPE DE RESSOURCES UNIQUE · rg-velmo-prod · France Central"]
 
-        subgraph APP["App Service · app-velmo-prod · Basic B1 · Python 3.11 · Web sockets"]
+        subgraph APP["App Service · app-velmo-prod · Basic B1 · Python 3.11"]
             direction TB
             UI["interface Streamlit<br/>user_id = session authentifiée<br/>jamais issu du message (R3)"]
             G1{{"1 · GARDE-FOU ENTRÉE<br/>1re ligne regex déterministe<br/>secret_leak · prompt_injection<br/>hate · violence · sexual · out_of_scope"}}
@@ -352,7 +352,7 @@ Version lisible sans outil, dans la convention du dossier de conception existant
 ║  GROUPE DE RESSOURCES UNIQUE : rg-velmo-prod          (région France Central)         ║
 ║                                                                                       ║
 ║  ┌─────────────────────────────────────────────────────────────────────────────────┐ ║
-║  │ APP SERVICE  app-velmo-prod   ·  Plan Basic B1  ·  Python 3.11  ·  Web sockets  │ ║
+║  │ APP SERVICE  app-velmo-prod   ·  Plan Basic B1  ·  Python 3.11                │ ║
 ║  │                                                                                 │ ║
 ║  │   ┌───────────────────────────────────────────────────────────────┐             │ ║
 ║  │   │ Paramètres d'application  ->  VARIABLES D'ENVIRONNEMENT        │◀── secrets  │ ║
