@@ -13,8 +13,10 @@ sans rien dégrader au passage.
 
 ## État
 
-**Conception terminée, aucune ressource Azure provisionnée.** La création des ressources est
-conditionnée à la validation du dossier par le formateur — c'est la porte d'entrée du brief.
+**Dossier validé, adaptations de code en attente de fusion, aucune ressource Azure provisionnée.**
+La validation par le formateur — porte d'entrée du brief — est acquise. Les six adaptations que le
+déploiement suppose sont écrites et testées dans
+[velmo-v2#7](https://github.com/Bealph/velmo-v2/pull/7), à fusionner avant de provisionner.
 
 ## Les quatre exigences non négociables
 
@@ -34,7 +36,7 @@ Trois ressources dans un groupe unique, qu'on peut supprimer d'un seul geste en 
 | Héberger et parler | Azure App Service (Linux)                     | Basic B1                   |
 | Se souvenir        | Azure Database for PostgreSQL Flexible Server | Burstable B1ms, deux bases |
 | Réfléchir          | Azure AI Foundry                              | endpoint `/openai/v1`      |
-| Porter les secrets | Paramètres d'application de l'App Service     | sans coffre de secrets     |
+| Porter les secrets | Coffre de clés `alpha-velmo-kv`               | référencé, identité managée |
 | Observer           | Log stream de l'App Service                   | —                          |
 
 Le déploiement **ne change que les substrats**, pas la logique : fichier local vers base managée,

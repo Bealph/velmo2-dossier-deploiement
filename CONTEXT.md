@@ -41,7 +41,13 @@ même si elle est techniquement meilleure.
 
 **Hors périmètre**
 - Machine virtuelle : écartée par la ressource formateur (trop complexe pour ce niveau).
-- Identité managée et RBAC : non mentionnées par le brief ni par la ressource. Ne pas les introduire.
+- ~~Identité managée et RBAC~~ — **exclusion levée le 2026-09-08, sur décision explicite.** Les
+  secrets sont désormais dans le coffre `alpha-velmo-kv` (voir `02-secrets-et-config.md` §2.2), et
+  une App Service ne sait lire un coffre que par une **identité managée** : c'est la condition
+  technique du choix, pas une addition décorative. Concrètement : identité affectée par le système
+  sur `Velmo2-alpha`, rôle **Key Vault Secrets User** sur le seul coffre. Le RBAC introduit se
+  limite à cette attribution et à un **Key Vault Secrets Officer** pour l'opérateur humain.
+  Le coffre, lui, était déjà dans le périmètre : le brief le cite explicitement.
 - Tout service Azure non cité ci-dessus (Front Door, API Management, VNet, Application Gateway, etc.).
 
 ## 4. Contrainte de coût
@@ -178,24 +184,26 @@ d'acceptance doit le prouver.
 
 ## 7. Avancement
 
-Phase en cours : **conception terminée, dossier prêt à soumettre**. Aucune ressource Azure
-provisionnée. Dernière mise à jour : **2026-08-07**.
+Phase en cours : **dossier validé, adaptations de code en attente de fusion**. Aucune ressource
+Azure provisionnée. Dernière mise à jour : **2026-09-08**.
 
-| #   | Attendu du brief                                 | Livrable                                                                                                                     | État                                                                        |
-| --- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| 0   | Inventaire du code existant                      | `CONTEXT.md` section 5                                                                                                       | **fait**                                                                    |
-| 1   | Choix des services Azure                         | `dossier-deploiement/01-choix-services.md`                                                                                   | **fait** — App Service B1, PostgreSQL Flexible Server, Azure AI Foundry     |
-| 2   | Gestion des secrets et de la configuration       | `dossier-deploiement/02-secrets-et-config.md`                                                                                | **fait** — inventaire reconstruit depuis le code et revérifié le 2026-08-07 |
-| 3   | Schéma de déploiement cible                      | `dossier-deploiement/03-schema-cible.md` + `diagrammes/` (4 vues : sources `.mermaid`, images `.svg`, outil de régénération) | **fait**                                                                    |
-|     | **Validation formateur (porte d'entrée)**        | `dossier-deploiement/00-questions-formateur.md`                                                                              | **à soumettre — étape en cours**                                            |
-| 4   | Provisionner les ressources Azure                | `infra/` + `preuves/`                                                                                                        | bloqué par la validation                                                    |
-| 5   | Déployer l'agent et le connecter au service d'IA | URL publique                                                                                                                 | bloqué par la validation                                                    |
-| 6   | Mémoire long terme persistante et isolée         | preuve R2 + R3                                                                                                               | bloqué par la validation                                                    |
-| 7   | Vérifier garde-fous et secrets en production     | `preuves/protocole-tests-acceptance.md`                                                                                      | bloqué par la validation                                                    |
-| 8   | Premiers signaux de suivi                        | relevé latence, coût, taux de blocage                                                                                        | bloqué par la validation                                                    |
-| 9   | Documenter et présenter                          | `runbook/deployer-et-exploiter-velmo-sur-azure.md` + `pitch-soutenance.md`                                                   | trame de soutenance ébauchée, à réviser sur constats réels                  |
+| # | Attendu du brief                                 | Livrable                                                                   | État                                                                             |
+| - | ------------------------------------------------ | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 0 | Inventaire du code existant                      | `CONTEXT.md` section 5                                                     | **fait**                                                                         |
+| 1 | Choix des services Azure                         | `dossier-deploiement/01-choix-services.md`                                 | **fait** — App Service B1, PostgreSQL Flexible Server, Azure AI Foundry          |
+| 2 | Gestion des secrets et de la configuration       | `dossier-deploiement/02-secrets-et-config.md`                              | **fait** — inventaire reconstruit depuis le code, revérifié le 2026-08-07        |
+| 3 | Schéma de déploiement cible                      | `dossier-deploiement/03-schema-cible.md` + `diagrammes/` (4 vues)          | **fait**                                                                         |
+|   | **Validation formateur (porte d'entrée)**        | `dossier-deploiement/00-questions-formateur.md`                            | **franchie** — dossier soumis et validé                                          |
+| 4 | Provisionner les ressources Azure                | `infra/` + `preuves/`                                                      | **à faire** — deux relevés préalables (`01-choix-services.md` §1.4 et §1.5)      |
+| 5 | Déployer l'agent et le connecter au service d'IA | URL publique                                                               | **à faire** — après fusion de velmo-v2#7                                         |
+| 6 | Mémoire long terme persistante et isolée         | preuve R2 + R3                                                             | **à faire** — test T1 du protocole                                               |
+| 7 | Vérifier garde-fous et secrets en production     | `preuves/protocole-tests-acceptance.md`                                    | protocole **écrit**, à exécuter (T3 à T7)                                        |
+| 8 | Premiers signaux de suivi                        | relevé latence, coût, taux de blocage                                      | **à faire** — test T8 du protocole                                               |
+| 9 | Documenter et présenter                          | `runbook/deployer-et-exploiter-velmo-sur-azure.md` + `pitch-soutenance.md` | runbook **écrit**, à remplir pendant l'exécution ; trame de soutenance à réviser |
 
-**Six adaptations de code à faire après validation** (dans une copie, jamais dans TP7 — règle 1) :
+**Six adaptations de code — écrites et testées, en attente de fusion.** Elles vivent sur la branche
+`feat/deploiement-azure` du dépôt `velmo-v2` (PR #7, ouverte le 2026-08-07 : porte qualité au vert,
+fusionnable, sans revue à ce jour). Le dépôt source TP7 n'a pas été touché — règle 1.
 
 | Adaptation                                      | Emplacement                                       | Pourquoi                                                                       |
 | ----------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -204,7 +212,7 @@ provisionnée. Dernière mise à jour : **2026-08-07**.
 | Externaliser le seuil de remboursement          | `tools/_common.py:11` (`REFUND_CAP = 50.0`)       | Exigence du brief : les seuils de garde-fous sont configurables hors du code   |
 | Interrupteur `VELMO_MODERATOR`                  | `agent.py:348` (`build_default_agent`)            | Décision 1 : sans lui, le juge ne peut pas être désactivé comme demandé |
 | Interrupteur `VELMO_DEBUG_PANEL`                | `chat_app.py:69-142`                              | Décision 4 : ne rien exposer par défaut, activable pour la démonstration       |
-| Compléter `.env.example`                        | dépôt TP7                                         | Documentation des noms de paramètres, sans valeur ; retirer `grok-4.3`         |
+| Compléter `.env.example`                        | `.env.example` (racine `velmo-v2`)                                      | Documentation des noms de paramètres, sans valeur ; retirer `grok-4.3`         |
 
 ## 8. Questions ouvertes
 

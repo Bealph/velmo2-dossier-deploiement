@@ -105,12 +105,44 @@ contenus du dépôt casserait la traçabilité des versions mise en place au TP7
 
 ## 2.2 Mécanisme de stockage côté Azure
 
-### Solution retenue : **paramètres d'application (Application settings) de l'App Service, sans coffre de secrets**
+### Solution retenue : **coffre de clés `alpha-velmo-kv`, référencé depuis les paramètres d'application**
 
-Le brief autorise les paramètres d'application « et/ou » un coffre de secrets. Les deux sont donc
+> **Décision révisée le 2026-09-08, en cours de déploiement.** Ce paragraphe retenait initialement
+> les paramètres d'application **sans** coffre de secrets ; l'argumentaire d'origine est conservé
+> plus bas, car il reste valable dans ses prémisses. Ce qui a changé est l'arbitrage, pas les faits.
+
+Le brief autorise les paramètres d'application « et/ou » un coffre de secrets. Les deux sont
 recevables ; le choix doit être argumenté.
 
-**Justification du choix**
+**Ce qui est en place**
+
+Les trois valeurs confidentielles — la clé du service d'IA et les deux chaînes de connexion — sont
+stockées dans le coffre `alpha-velmo-kv` (France Central, autorisation RBAC, suppression réversible
+et protection contre le purge actives). Les paramètres d'application ne contiennent plus la valeur
+mais une **référence** :
+
+```text
+DB_URL = @Microsoft.KeyVault(VaultName=alpha-velmo-kv;SecretName=db-url)
+```
+
+La forme `VaultName;SecretName`, sans numéro de version, est délibérée : une rotation du secret est
+prise en compte sans retoucher la configuration de l'application.
+
+L'App Service lit le coffre grâce à une **identité affectée par le système**, titulaire du rôle
+**Key Vault Secrets User** sur ce seul coffre. C'est la contrepartie assumée du choix : sans elle,
+aucune référence ne se résout. `CONTEXT.md` §3 a été amendé en conséquence.
+
+**Vérification faite, pas supposée** : l'API `configreferences` d'App Service rend les trois
+références à l'état `Resolved`. Une référence mal formée ne lève aucune erreur — l'application
+démarrerait avec la chaîne littérale `@Microsoft.KeyVault(...)` comme valeur.
+
+**Ce que ce choix coûte et rapporte.** Il ajoute une ressource, une identité et deux attributions de
+rôle à un périmètre que le brief voulait sobre. En échange, aucune valeur secrète n'est plus lisible
+dans le panneau de configuration de l'application, et leur consultation est tracée par le coffre.
+
+---
+
+**Justification de la solution initialement retenue** (paramètres d'application seuls)
 
 1. **Le coffre de secrets ne serait pas cohérent avec le périmètre imposé.** Azure Key Vault ne
    prend tout son sens qu'associé à une **identité managée**, qui permet à l'App Service de lire le
@@ -410,18 +442,18 @@ journalisation des blocages masque déjà les catégories sensibles (`guardrails
 
 ## 2.7 Points de contrôle avant soumission au formateur
 
-| Point                                                           | Vérifié                                        |
-| --------------------------------------------------------------- | ---------------------------------------------- |
-| L'inventaire couvre la clé **et** l'endpoint du service d'IA    | oui (§2.1 A et B)                              |
-| L'inventaire couvre la connexion au stockage mémoire            | oui (`VELMO_MEMORY_DB_URL`, §2.1 A)            |
-| L'inventaire couvre les seuils des garde-fous                   | oui (`VELMO_REFUND_CAP`, §2.1 B et décision 3) |
-| L'inventaire est établi à partir du code, pas de `.env.example` | oui (méthode, §2.5)                            |
-| Ce qui reste volontairement en dur est justifié                 | oui (§2.1 D)                                   |
-| Le mécanisme de stockage côté Azure est décrit et justifié      | oui (§2.2)                                     |
-| Le choix entre paramètres d'application et coffre est argumenté | oui (§2.2)                                     |
-| La chaîne de lecture des valeurs à l'exécution est décrite      | oui (§2.2)                                     |
-| L'absence de secret dans le dépôt et l'historique est prouvée   | oui (§2.6)                                     |
-| Aucune valeur réelle ne figure dans ce document                 | oui                                            |
-| Décision sur l'activation du LLM-juge                           | **à acter avec le formateur** (décision 1)     |
-| Décision sur l'exposition du panneau de débogage                | **à acter avec le formateur** (§2.6)           |
-| `.env.example` mis à jour et complété                           | **à faire** (§2.5)                             |
+| Point                                                           | Vérifié                                                      |
+| --------------------------------------------------------------- | ------------------------------------------------------------ |
+| L'inventaire couvre la clé **et** l'endpoint du service d'IA    | oui (§2.1 A et B)                                            |
+| L'inventaire couvre la connexion au stockage mémoire            | oui (`VELMO_MEMORY_DB_URL`, §2.1 A)                          |
+| L'inventaire couvre les seuils des garde-fous                   | oui (`VELMO_REFUND_CAP`, §2.1 B et décision 3)               |
+| L'inventaire est établi à partir du code, pas de `.env.example` | oui (méthode, §2.5)                                          |
+| Ce qui reste volontairement en dur est justifié                 | oui (§2.1 D)                                                 |
+| Le mécanisme de stockage côté Azure est décrit et justifié      | oui (§2.2)                                                   |
+| Le choix entre paramètres d'application et coffre est argumenté | oui (§2.2)                                                   |
+| La chaîne de lecture des valeurs à l'exécution est décrite      | oui (§2.2)                                                   |
+| L'absence de secret dans le dépôt et l'historique est prouvée   | oui (§2.6)                                                   |
+| Aucune valeur réelle ne figure dans ce document                 | oui                                                          |
+| Décision sur l'activation du LLM-juge                           | oui — actée le 2026-08-07 : désactivé (décision 1, option c) |
+| Décision sur l'exposition du panneau de débogage                | oui — actée le 2026-08-07 : masqué par défaut (décision 4)   |
+| `.env.example` mis à jour et complété                           | fait dans velmo-v2#7, en attente de fusion (§2.5)            |
