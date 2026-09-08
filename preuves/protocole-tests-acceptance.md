@@ -7,6 +7,10 @@
 **avant** la séance : une séance de test improvisée produit des captures inutilisables et oblige à
 tout recommencer.
 
+> **Pendant la séance, travailler sur [`feuille-de-saisie-tests.md`](feuille-de-saisie-tests.md)** :
+> les mêmes tests, réduits aux messages exacts à saisir et aux cases à remplir. Ce document-ci porte
+> le raisonnement — pourquoi chaque test est construit ainsi — et se lit **avant**, pas pendant.
+
 ## Le principe : rejouer, ne pas inventer
 
 Le brief demande que « ce qui marchait en local marche en ligne ». Cette phrase impose la méthode :
@@ -143,9 +147,15 @@ moitié de l'attendu manque.
 
 Forme attendue :
 
+```text
+WARNING velmo.guardrails blocage where=input category=prompt_injection method=rules user=C-marc-dubois
 ```
-INFO velmo.guardrails blocage where=input category=prompt_injection method=rules user=C-marc-dubois
-```
+
+> **Le niveau est `WARNING`, pas `INFO`** — corrigé le 2026-09-08, après lecture du code fusionné
+> (velmo-v2#7). Ce n'est pas un détail de présentation : sans configuration de journalisation,
+> Python n'émet que `WARNING` et au-delà, via son gestionnaire de dernier recours. Un `INFO` serait
+> resté invisible sur un hébergeur qui ne configure rien — donc T6 aurait échoué alors même que le
+> garde-fou fonctionnait. Le code a raison, c'est ce protocole qui était en avance sur lui.
 
 **Preuve à capturer** : l'écran partagé entre l'interface (le refus) et le Log stream (la ligne),
 avec le même horodatage. C'est la capture la plus convaincante de toute la séance.
