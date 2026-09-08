@@ -119,9 +119,13 @@ montrer qu'on sait où sont les secrets et qui peut les voir.
 Base connue pour le taux : les messages 9 à 14 jouent **5 cas à bloquer et 1 à laisser passer**.
 Un taux qui s'en écarte signale une régression.
 
-> **Cost Management** : le filtre ne peut pas porter sur le groupe de ressources, qui héberge aussi
-> des projets sans rapport. Filtrer sur les ressources `Velmo2-alpha`, `Alpha-velmo2`,
-> `psql-velmo-prod-417` et `oai-velmo-prod`.
+> **Cost Management, deux pièges.** Le filtre ne peut pas porter sur le groupe de ressources, qui
+> héberge aussi des projets sans rapport : filtrer sur `Velmo2-alpha`, `Alpha-velmo2`,
+> `psql-velmo-prod-417` et `oai-velmo-prod`. Et surtout, **les données de facturation ont un délai
+> de 8 à 24 heures** — au 2026-09-08, quelques heures après le provisionnement, la consommation
+> relevée était encore à zéro sur toutes les ressources. Un relevé fait le jour même ne prouve rien
+> et ferait mauvais effet en soutenance. À faire le lendemain, en citant l'estimation du §1.5 comme
+> ordre de grandeur en attendant : **26,87 € par mois** de socle fixe, jetons en sus.
 
 ---
 
