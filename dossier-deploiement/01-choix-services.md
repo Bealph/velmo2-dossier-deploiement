@@ -335,24 +335,51 @@ et ajoute de la latence entre l'App Service et la base.
 
 Groupe de ressources **unique** : `rg-velmo-prod`, région **France Central** (sous réserve §1.4).
 
-| Ressource            | Type Azure                                    | Nom envisagé      | Niveau / plan                             | Coût mensuel estimé    |
-| -------------------- | --------------------------------------------- | ----------------- | ----------------------------------------- | ---------------------- |
-| Groupe de ressources | Resource group                                | `rg-velmo-prod`   | sans objet                                | 0                      |
-| Plan d'hébergement   | App Service plan (Linux)                      | `asp-velmo-prod`  | **Basic B1** (1 cœur, 1,75 Go RAM, 10 Go) | à relever              |
-| Application          | App Service (Web App, Python 3.11)            | `app-velmo-prod`  | porté par le plan                         | inclus dans le plan    |
-| Stockage mémoire     | Azure Database for PostgreSQL Flexible Server | `psql-velmo-prod` | **Burstable B1ms** plus stockage minimal  | à relever              |
-| Service d'IA         | Azure AI Foundry / Azure OpenAI               | `oai-velmo-prod`  | Standard, à la consommation               | à relever (par jetons) |
-|                      |                                               |                   | **Total**                                 | **à relever**          |
+| Ressource            | Type Azure                                    | Nom réel              | Niveau / plan                             | Coût mensuel      |
+| -------------------- | --------------------------------------------- | --------------------- | ----------------------------------------- | ----------------- |
+| Groupe de ressources | Resource group                                | `adialloRG` (partagé) | sans objet                                | 0                 |
+| Plan d'hébergement   | App Service plan (Linux)                      | `Alpha-velmo2`        | **Basic B1** (1 cœur, 1,75 Go RAM, 10 Go) | **11,31 €**       |
+| Application          | App Service (Web App, Python 3.11)            | `Velmo2-alpha`        | porté par le plan                         | inclus            |
+| Stockage mémoire     | Azure Database for PostgreSQL Flexible Server | `psql-velmo-prod-417` | **Burstable B1ms**, 32 Go                 | **11,90 €**       |
+| — son stockage       | Premium SSD, 32 Go provisionnés               | —                     | 0,1142 €/Go/mois                          | **3,65 €**        |
+| Service d'IA         | Azure AI Foundry (`AIServices`, S0)           | `oai-velmo-prod`      | GlobalStandard, à la consommation         | jetons, ci-dessous |
+| Coffre de secrets    | Key Vault (préexistant)                       | `alpha-velmo-kv`      | 0,0258 €/10 000 opérations                | < 0,01 €          |
+|                      |                                               |                       | **Total fixe**                            | **26,87 €/mois**  |
+
+**Jetons du modèle `gpt-5.6-terra`**, GlobalStandard, contexte court, par million de jetons :
+**1,7173 €** en entrée, **10,3040 €** en sortie, **0,1717 €** pour une entrée servie par le cache.
+Un tour de conversation de l'agent pèse quelques milliers de jetons : à l'échelle d'une
+démonstration, la dépense de jetons reste très inférieure au socle fixe.
+
+**Le coût réel sera plus bas que 26,87 €** : les ressources ne vivront pas un mois entier, et le
+groupe est supprimé — ici, ressource par ressource — en fin de brief.
 
 Convention de nommage : `rg-` groupe de ressources, `asp-` plan App Service, `app-` application,
 `psql-` base PostgreSQL, `oai-` service d'IA. Le nom de l'application doit être **globalement
 unique** : il devient l'URL `https://<nom>.azurewebsites.net`.
 
-### Procédure de relevé des coûts (à exécuter avant provisionnement)
+### Procédure de relevé des coûts — **exécutée le 2026-09-08**
 
-Les montants ne sont **pas** reportés ici de mémoire : la page tarifaire officielle charge ses prix
-dynamiquement, et Microsoft précise que le tarif applicable dépend de l'offre du compte (ici Azure
-for Students) et du taux de change. Procédure :
+Les montants ci-dessus ne sont pas reportés de mémoire. Ils viennent de l'**API tarifaire publique
+de Microsoft** (`prices.azure.com/api/retail/prices`), interrogée en EUR pour la région
+`francecentral`, ce qui est plus reproductible que le calculateur : la requête est citable et
+rejouable à l'identique, alors qu'une page web recalculée ne l'est pas.
+
+```bash
+curl "https://prices.azure.com/api/retail/prices?currencyCode=EUR&\$filter=armRegionName%20eq%20'francecentral'%20and%20serviceName%20eq%20'Azure%20App%20Service'"
+```
+
+Les tarifs horaires sont convertis en mensuel sur **730 heures**. Les jetons du modèle relèvent du
+service `Foundry Models`, dont les libellés sont abrégés — `Inp` pour l'entrée, `Opt` pour la
+sortie, `Std Gl` pour GlobalStandard, `ShortCo` pour le contexte court.
+
+**Deux réserves à énoncer plutôt qu'à taire.** Ce sont des **prix catalogue** : le tarif réellement
+facturé dépend de l'offre attachée à l'abonnement. Et l'abonnement utilisé n'est pas un compte
+« Azure for Students » comme le supposait `CONTEXT.md` §4, mais un abonnement de formation
+mutualisé — la contrainte des 100 $ de crédit ne s'applique donc pas telle quelle. Seul
+**Cost Management** dira la dépense réelle, une fois les ressources en service.
+
+**Procédure alternative** (calculateur, à privilégier si l'on veut le tarif de l'offre du compte) :
 
 1. Ouvrir le **calculateur de prix Azure** (`azure.microsoft.com/pricing/calculator`), **connecté au
    compte** pour obtenir le tarif réellement applicable.
@@ -385,5 +412,5 @@ Faits tarifaires vérifiés sur la page officielle (2026-07-27), utiles à la ju
 | Le stockage mémoire répond explicitement à R2 et à R3                                  | oui (§1.2)                                       |
 | Le plan de la mémoire persistante est fourni (schéma, clé d'isolation, migration)      | oui (§1.2)                                       |
 | Aucun service hors périmètre n'est introduit (`CONTEXT.md` §3)                         | oui                                              |
-| Les coûts sont relevés au calculateur, non estimés de mémoire                          | **non — à faire (§1.5)**                         |
-| La disponibilité du modèle dans la région est vérifiée                                 | **non — à faire (§1.4)**                         |
+| Les coûts sont relevés à une source officielle, non estimés de mémoire                 | oui — API tarifaire Microsoft, 2026-09-08 (§1.5) |
+| La disponibilité du modèle dans la région est vérifiée                                 | oui — `gpt-5.6-terra` en GlobalStandard à France Central, et **déployé** (§1.4) |

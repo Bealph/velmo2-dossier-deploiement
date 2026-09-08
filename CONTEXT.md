@@ -52,7 +52,13 @@ même si elle est techniquement meilleure.
 
 ## 4. Contrainte de coût
 
-- Abonnement sur un **plan payant basique, budget serré** (compte Azure for Students, 100 $ de crédit).
+- Abonnement : **`REMOTE_WCS_211537_DEV IA`**, abonnement de formation **mutualisé** (tenant
+  Simplonformations), et non un compte Azure for Students à 100 $ de crédit comme supposé jusqu'au
+  2026-09-08. Trois conséquences constatées : le compte est **Reader** sur l'abonnement et Owner sur
+  le seul groupe `adialloRG`, donc pas de groupe dédié possible ; ce groupe héberge d'autres projets,
+  donc pas de suppression en bloc ; et le quota du modèle est partagé — `gpt-5.6-terra` était
+  consommé à 3375 sur 4000 en France Central au moment du déploiement. Rester sobre est une question
+  de voisinage autant que de budget.
 - Plan App Service retenu : **Basic (B1)**, et non F1. B1 apporte Always On, donc pas de démarrage à
   froid pendant la démonstration au commanditaire. Le surcoût par rapport à F1 est assumé.
 - Toutes les ressources dans **un seul groupe de ressources**, pour pouvoir tout supprimer d'un coup
@@ -184,8 +190,10 @@ d'acceptance doit le prouver.
 
 ## 7. Avancement
 
-Phase en cours : **dossier validé, adaptations de code en attente de fusion**. Aucune ressource
-Azure provisionnée. Dernière mise à jour : **2026-09-08**.
+Phase en cours : **déployé en ligne, tests d'acceptance à jouer**. L'application répond à son URL
+publique, les quatre ressources sont en service. Dernière mise à jour : **2026-09-08**.
+
+**URL publique** : `https://velmo2-alpha-cqhhavf9ewguc6e7.francecentral-01.azurewebsites.net`
 
 | # | Attendu du brief                                 | Livrable                                                                   | État                                                                             |
 | - | ------------------------------------------------ | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
@@ -194,9 +202,9 @@ Azure provisionnée. Dernière mise à jour : **2026-09-08**.
 | 2 | Gestion des secrets et de la configuration       | `dossier-deploiement/02-secrets-et-config.md`                              | **fait** — inventaire reconstruit depuis le code, revérifié le 2026-08-07        |
 | 3 | Schéma de déploiement cible                      | `dossier-deploiement/03-schema-cible.md` + `diagrammes/` (4 vues)          | **fait**                                                                         |
 |   | **Validation formateur (porte d'entrée)**        | `dossier-deploiement/00-questions-formateur.md`                            | **franchie** — dossier soumis et validé                                          |
-| 4 | Provisionner les ressources Azure                | `infra/` + `preuves/`                                                      | **à faire** — deux relevés préalables (`01-choix-services.md` §1.4 et §1.5)      |
-| 5 | Déployer l'agent et le connecter au service d'IA | URL publique                                                               | **à faire** — après fusion de velmo-v2#7                                         |
-| 6 | Mémoire long terme persistante et isolée         | preuve R2 + R3                                                             | **à faire** — test T1 du protocole                                               |
+| 4 | Provisionner les ressources Azure                | `infra/` + `preuves/`                                                      | **fait** — 4 ressources dans `adialloRG`, relevés §1.4 et §1.5 exécutés          |
+| 5 | Déployer l'agent et le connecter au service d'IA | URL publique                                                               | **fait** — HTTP 200, modèle `gpt-5.6-terra` testé en direct                      |
+| 6 | Mémoire long terme persistante et isolée         | preuve R2 + R3                                                             | substrat en place (tables créées par l'app en ligne) ; preuves T1/T2 à capturer  |
 | 7 | Vérifier garde-fous et secrets en production     | `preuves/protocole-tests-acceptance.md`                                    | protocole **écrit**, à exécuter (T3 à T7)                                        |
 | 8 | Premiers signaux de suivi                        | relevé latence, coût, taux de blocage                                      | **à faire** — test T8 du protocole                                               |
 | 9 | Documenter et présenter                          | `runbook/deployer-et-exploiter-velmo-sur-azure.md` + `pitch-soutenance.md` | runbook **écrit**, à remplir pendant l'exécution ; trame de soutenance à réviser |
